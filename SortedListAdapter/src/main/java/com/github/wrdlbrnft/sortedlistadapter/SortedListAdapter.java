@@ -1,6 +1,7 @@
 package com.github.wrdlbrnft.sortedlistadapter;
 
 import android.content.Context;
+import android.support.v4.util.LongSparseArray;
 import android.support.v7.util.SortedList;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -10,6 +11,7 @@ import android.view.ViewGroup;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -25,8 +27,16 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         Editor<T> remove(T item);
         Editor<T> remove(List<T> items);
         Editor<T> replaceAll(List<T> items);
+        Editor<T> replace(T item);
         Editor<T> removeAll();
         void commit();
+
+        List<T> filterContains(List<T> items);
+        List<T> filterFirst(List<T> items);
+
+        List<T> filterContainsAndNew(List<T> incomingList);
+
+        Editor<T> removeByIndex(int position, int count);
     }
 
     public interface Filter<T> {
@@ -35,6 +45,13 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
 
     private final LayoutInflater mInflater;
     private final SortedList<T> mSortedList;
+    public List<T> getList(){
+        List<T> list = new ArrayList<>();
+        for(int i = 0; i < mSortedList.size(); i ++){
+            list.add(mSortedList.get(i));
+        }
+        return list;
+    }
     private final Comparator<T> mComparator;
 
     public SortedListAdapter(Context context, Class<T> itemClass, Comparator<T> comparator) {
@@ -95,12 +112,26 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         ((ViewHolder<T>) holder).bind(item);
     }
 
+    @Override
+    public void onBindViewHolder(ViewHolder<? extends T> holder, int position, List<Object> payloads) {
+        super.onBindViewHolder(holder, position, payloads);
+        final T item = mSortedList.get(position);
+        if(payloads.size() > 0)
+            ((ViewHolder<T>) holder).bindPartial(item, payloads);
+    }
+
     public final Editor<T> edit() {
         return new EditorImpl();
     }
 
     public final T getItem(int position) {
         return mSortedList.get(position);
+    }
+
+    public final T getItem(T itemToFind) {
+        int indexOf = mSortedList.indexOf(itemToFind);
+        if(indexOf != -1) return mSortedList.get(indexOf);
+        return null;
     }
 
     @Override
@@ -189,17 +220,43 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
             mActions.add(new Action<T>() {
                 @Override
                 public void perform(SortedList<T> list) {
-                    final List<T> itemsToRemove = filter(new Filter<T>() {
-                        @Override
-                        public boolean test(T item) {
-                            return !items.contains(item);
+                    // Changing this to update items that are already in the list
+                    // so that the items don't disappear or appear to flash
+                    final LongSparseArray<T> itemsToUpdate = new LongSparseArray<T>();
+                    final List<T> matchItems = filterContains(items);
+                    for (T item :
+                            matchItems) {
+                        int index = mSortedList.indexOf(item);
+                        if(index > -1) {
+                            itemsToUpdate.put(index, item);
                         }
-                    });
-                    for (int i = itemsToRemove.size() - 1; i >= 0; i--) {
-                        final T item = itemsToRemove.get(i);
-                        mSortedList.remove(item);
                     }
-                    mSortedList.addAll(items);
+                    for (int i = 0; i < itemsToUpdate.size(); ++i){
+                        int key = (int) itemsToUpdate.keyAt(i);
+                        T item = itemsToUpdate.get(key);
+                        mSortedList.updateItemAt(key, item);
+                        //since it is updating, remove from initial list
+                        items.remove(item);
+                    }
+                    //add the remaining
+                    if(items.size() > 0)
+                        mSortedList.addAll(items);
+                }
+            });
+            return this;
+        }
+
+        @Override
+        public Editor<T> replace(final T item) {
+            mActions.add(new Action<T>() {
+                @Override
+                public void perform(SortedList<T> list) {
+                    int matchIndex = mSortedList.indexOf(item);
+                    if(matchIndex > -1) {
+                        mSortedList.updateItemAt(matchIndex, item);
+                    }else{
+                        mSortedList.add(item);
+                    }
                 }
             });
             return this;
@@ -225,6 +282,65 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
             mSortedList.endBatchedUpdates();
             mActions.clear();
         }
+
+        @Override
+        public List<T> filterContains(final List<T> items) {
+            final List<T> itemsToRemove = filter(new Filter<T>() {
+                @Override
+                public boolean test(T item) {
+                    return !items.contains(item);
+                }
+            });
+            for (int i = itemsToRemove.size() - 1; i >= 0; i--) {
+                final T item = itemsToRemove.get(i);
+                items.remove(item);
+            }
+            return items;
+        }
+
+        @Override
+        public List<T> filterFirst(final List<T> items) {
+            final List<T> itemsToRemove = filter(new Filter<T>() {
+                @Override
+                public boolean test(T item) {
+                    return items.contains(item);
+                }
+            });
+            for (int i = itemsToRemove.size() - 1; i >= 0; i--) {
+                final T item = itemsToRemove.get(i);
+                items.remove(item);
+            }
+            return items;
+        }
+
+        @Override
+        public List<T> filterContainsAndNew(List<T> items) {
+            List<T> filter = filterContains(items);
+            for (int i = filter.size() - 1; i >= 0; i--) {
+                final T item = filter.get(i);
+                final int indexOf = mSortedList.indexOf(item);
+                if(indexOf > -1){
+                    T toCompare = mSortedList.get(indexOf);
+                    if(areItemContentsTheSame(item, toCompare)){
+                        filter.remove(item);
+                    }
+                }
+            }
+            return filter;
+        }
+
+        @Override
+        public Editor<T> removeByIndex(final int position, final int count) {
+            mActions.add(new Action<T>() {
+                @Override
+                public void perform(SortedList<T> list) {
+                    for (int i = position; i < position + count; ++i) {
+                        mSortedList.removeItemAt(i);
+                    }
+                }
+            });
+            return this;
+        }
     }
 
     public abstract static class ViewHolder<T extends ViewModel> extends RecyclerView.ViewHolder {
@@ -245,6 +361,13 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         public final T getCurrentItem() {
             return mCurrentItem;
         }
+
+        public void bindPartial(T item, List<Object> payloads) {
+            mCurrentItem = item;
+            performPartialBind(item, payloads);
+        }
+
+        protected abstract void performPartialBind(T item, List<Object> payloads);
     }
 
     public interface ViewModel {
