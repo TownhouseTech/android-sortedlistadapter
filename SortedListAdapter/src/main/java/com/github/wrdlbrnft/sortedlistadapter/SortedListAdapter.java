@@ -129,9 +129,13 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
     }
 
     public final T getItem(T itemToFind) {
-        int indexOf = mSortedList.indexOf(itemToFind);
+        int indexOf = getItemPosition(itemToFind);
         if(indexOf != -1) return mSortedList.get(indexOf);
         return null;
+    }
+
+    public final int getItemPosition(T itemToFind) {
+        return mSortedList.indexOf(itemToFind);
     }
 
     @Override
