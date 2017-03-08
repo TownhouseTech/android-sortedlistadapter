@@ -134,6 +134,15 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         return null;
     }
 
+    public final int getItemPosition(T itemToFind) {
+        for (int i = 0; i < mSortedList.size(); ++i){
+            if(mSortedList.get(i).equals(itemToFind)){
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Override
     public final int getItemCount() {
         return mSortedList.size();
