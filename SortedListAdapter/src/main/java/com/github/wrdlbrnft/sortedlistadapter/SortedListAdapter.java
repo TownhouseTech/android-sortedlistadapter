@@ -29,6 +29,7 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         Editor<T> replaceAll(List<T> items);
         Editor<T> replace(T item);
         Editor<T> removeAll();
+        Editor<T> updateItemAt(int index, T item);
         void commit();
 
         List<T> filterContains(List<T> items);
@@ -268,6 +269,17 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
                 @Override
                 public void perform(SortedList<T> list) {
                     mSortedList.clear();
+                }
+            });
+            return this;
+        }
+
+        @Override
+        public Editor<T> updateItemAt(final int index, final T item) {
+            mActions.add(new Action<T>() {
+                @Override
+                public void perform(SortedList<T> list) {
+                    mSortedList.updateItemAt(index, item);
                 }
             });
             return this;
