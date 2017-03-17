@@ -58,6 +58,10 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         return mSortedList;
     }
 
+    public void notifyIndexChanged(int index){
+        notifyItemRangeChanged(index, 1);
+    }
+    
     private final Comparator<T> mComparator;
 
     public SortedListAdapter(Context context, Class<T> itemClass, Comparator<T> comparator) {
