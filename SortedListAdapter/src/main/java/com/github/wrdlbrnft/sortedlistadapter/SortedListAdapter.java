@@ -29,7 +29,7 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         Editor<T> replaceAll(List<T> items);
         Editor<T> replace(T item);
         Editor<T> removeAll();
-        Editor<T> updateItemAt(int index, T item);
+        Editor<T> updateItemAt(int id, T item);
         void commit();
 
         List<T> filterContains(List<T> items);
@@ -53,6 +53,11 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         }
         return list;
     }
+
+    public SortedList<T> getSortedList(){
+        return mSortedList;
+    }
+
     private final Comparator<T> mComparator;
 
     public SortedListAdapter(Context context, Class<T> itemClass, Comparator<T> comparator) {
