@@ -38,6 +38,7 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         List<T> filterContainsAndNew(List<T> incomingList);
 
         Editor<T> removeByIndex(int position, int count);
+        Editor<T> doAction(Action<T> thisAction);
     }
 
     public interface Filter<T> {
@@ -295,6 +296,8 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
             return this;
         }
 
+
+
         @Override
         public Editor<T> updateItemAt(final int index, final T item) {
             mActions.add(new Action<T>() {
@@ -372,6 +375,12 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
                     }
                 }
             });
+            return this;
+        }
+
+        @Override
+        public Editor<T> doAction(Action<T> thisAction) {
+            mActions.add(thisAction);
             return this;
         }
     }
