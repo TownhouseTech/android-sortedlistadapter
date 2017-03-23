@@ -183,7 +183,7 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         return null;
     }
 
-    private interface Action<T extends ViewModel> {
+    public interface Action<T extends ViewModel> {
         void perform(SortedList<T> list);
     }
 
