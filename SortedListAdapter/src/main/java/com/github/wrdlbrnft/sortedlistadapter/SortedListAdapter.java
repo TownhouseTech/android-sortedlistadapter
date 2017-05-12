@@ -114,10 +114,11 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
 
     @Override
     public void onBindViewHolder(ViewHolder<? extends T> holder, int position, List<Object> payloads) {
-        super.onBindViewHolder(holder, position, payloads);
         final T item = mSortedList.get(position);
         if(payloads.size() > 0)
             ((ViewHolder<T>) holder).bindPartial(item, payloads);
+        else
+            ((ViewHolder<T>) holder).bind(item);
     }
 
     public final Editor<T> edit() {
