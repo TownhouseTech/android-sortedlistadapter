@@ -21,6 +21,8 @@ import java.util.List;
  */
 public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> extends RecyclerView.Adapter<SortedListAdapter.ViewHolder<? extends T>> {
 
+    private boolean notify;
+
     public interface Editor<T extends ViewModel> {
         Editor<T> add(T item);
         Editor<T> add(List<T> items);
@@ -30,6 +32,7 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
         Editor<T> replace(T item);
         Editor<T> removeAll();
         void commit();
+        void commit(boolean noNotify);
 
         List<T> filterContains(List<T> items);
         List<T> filterFirst(List<T> items);
@@ -66,22 +69,26 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
 
             @Override
             public void onInserted(int position, int count) {
-                notifyItemRangeInserted(position, count);
+                if(notify)
+                    notifyItemRangeInserted(position, count);
             }
 
             @Override
             public void onRemoved(int position, int count) {
-                notifyItemRangeRemoved(position, count);
+                if(notify)
+                    notifyItemRangeRemoved(position, count);
             }
 
             @Override
             public void onMoved(int fromPosition, int toPosition) {
-                notifyItemMoved(fromPosition, toPosition);
+                if(notify)
+                    notifyItemMoved(fromPosition, toPosition);
             }
 
             @Override
             public void onChanged(int position, int count) {
-                notifyItemRangeChanged(position, count);
+                if(notify)
+                    notifyItemRangeChanged(position, count);
             }
 
             @Override
@@ -285,6 +292,12 @@ public abstract class SortedListAdapter<T extends SortedListAdapter.ViewModel> e
 
         @Override
         public void commit() {
+            commit(false);
+        }
+
+        @Override
+        public void commit(boolean noNotify) {
+            notify = !noNotify;
             mSortedList.beginBatchedUpdates();
             for (Action<T> action : mActions) {
                 action.perform(mSortedList);
